@@ -26,7 +26,7 @@ interface TextEditorProps {
   onChange?: (v: string) => void;
 }
 
-export default function TextEditor({ value, onChange }: TextEditorProps) {
+export default function RichText({ value, onChange }: TextEditorProps) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({

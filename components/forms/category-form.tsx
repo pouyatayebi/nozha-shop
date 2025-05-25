@@ -45,8 +45,9 @@ import { useCategoryStore } from "@/store/category.store";
 import ModalGallery from "@/components/gallery/modal-gallery";
 import { useImageStore } from "@/store/image.store";
 import Image from "next/image";
-import { RichText } from "@/components/forms/rich-text";
+
 import { mapCategoryToForm } from "@/helpers/mapCategoryToForm";
+import RichText from "./rich-text";
 
 export default function CategoryForm() {
   const { editing, setEditing, setCategories } = useCategoryStore();

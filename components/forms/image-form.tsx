@@ -45,7 +45,8 @@ export function ImageForm({
 
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [open, setOpen] = useState<string | null>(null);
+    // حالت باز/بسته آکاردئون
+  const [open, setOpen] = useState<string>(""); // "" = بسته
   const setImages = useImageStore.getState().setImages;
 
   const form = useForm<ImageInput & { file?: File }>({
@@ -79,7 +80,7 @@ useEffect(() => {
       }
     });
 
-    setOpen(null);
+    setOpen(""); // بستن آکاردئون بعد از موفقیت
   }
 }, [formState.success, form, editMode]);
 

@@ -112,7 +112,7 @@
 // }
 
 
-// components/forms/rich-text.tsx  (نسخهٔ نهایی)
+// components/forms/rich-text.tsx   (نسخهٔ نهایی بدون خطای تایپ)
 
 "use client";
 
@@ -164,8 +164,8 @@ export function RichText({ value, onChange }: RichTextProps) {
         <ToggleGroupItem
           value="bold"
           type="button"
-          onClick={() => editor.chain().focus().toggleBold().run()}
           aria-label="Bold"
+          onClick={() => editor.chain().focus().toggleBold().run()}
         >
           <Bold size={16} />
         </ToggleGroupItem>
@@ -173,8 +173,8 @@ export function RichText({ value, onChange }: RichTextProps) {
         <ToggleGroupItem
           value="italic"
           type="button"
-          onClick={() => editor.chain().focus().toggleItalic().run()}
           aria-label="Italic"
+          onClick={() => editor.chain().focus().toggleItalic().run()}
         >
           <Italic size={16} />
         </ToggleGroupItem>
@@ -182,8 +182,8 @@ export function RichText({ value, onChange }: RichTextProps) {
         <ToggleGroupItem
           value="underline"
           type="button"
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
           aria-label="Underline"
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
         >
           <UnderlineIcon size={16} />
         </ToggleGroupItem>
@@ -191,8 +191,8 @@ export function RichText({ value, onChange }: RichTextProps) {
         <ToggleGroupItem
           value="bulletList"
           type="button"
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
           aria-label="Bullet List"
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
         >
           <List size={16} />
         </ToggleGroupItem>
@@ -200,8 +200,8 @@ export function RichText({ value, onChange }: RichTextProps) {
         <ToggleGroupItem
           value="orderedList"
           type="button"
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
           aria-label="Ordered List"
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
         >
           <ListOrdered size={16} />
         </ToggleGroupItem>
@@ -209,8 +209,8 @@ export function RichText({ value, onChange }: RichTextProps) {
         <ToggleGroupItem
           value="alignRight"
           type="button"
-          onClick={() => editor.chain().focus().setTextAlign("right").run()}
           aria-label="Align Right"
+          onClick={() => editor.chain().focus().setTextAlign("right").run()}
         >
           <AlignRight size={16} />
         </ToggleGroupItem>

@@ -112,15 +112,20 @@
 // }
 
 
-// components/forms/rich-text.tsx
+// components/forms/rich-text.tsx  (نسخهٔ نهایی)
+
 "use client";
 
-import { EditorContent, useEditor } from "@tiptap/react";
+import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@/components/ui/toggle-group";
+
 import {
   Bold,
   Italic,
@@ -147,60 +152,65 @@ export function RichText({ value, onChange }: RichTextProps) {
       Underline,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
     ],
-    content: value ?? "", // جلوگیری از undefined
+    content: value ?? "",
     onUpdate: ({ editor }) => onChange?.(editor.getHTML()),
   });
 
   if (!editor) return null;
 
-  // کلاس فعال با data-state="on"؛ shadcn از قبل استایل دارد
   return (
     <div className="space-y-2">
       <ToggleGroup type="multiple" className="flex flex-wrap gap-1">
         <ToggleGroupItem
           value="bold"
-          aria-label="Bold"
+          type="button"
           onClick={() => editor.chain().focus().toggleBold().run()}
+          aria-label="Bold"
         >
           <Bold size={16} />
         </ToggleGroupItem>
 
         <ToggleGroupItem
           value="italic"
-          aria-label="Italic"
+          type="button"
           onClick={() => editor.chain().focus().toggleItalic().run()}
+          aria-label="Italic"
         >
           <Italic size={16} />
         </ToggleGroupItem>
 
         <ToggleGroupItem
           value="underline"
-          aria-label="Underline"
+          type="button"
           onClick={() => editor.chain().focus().toggleUnderline().run()}
+          aria-label="Underline"
         >
           <UnderlineIcon size={16} />
         </ToggleGroupItem>
 
         <ToggleGroupItem
           value="bulletList"
-          aria-label="Bullet list"
+          type="button"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
+          aria-label="Bullet List"
         >
           <List size={16} />
         </ToggleGroupItem>
 
         <ToggleGroupItem
           value="orderedList"
-          aria-label="Ordered list"
+          type="button"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          aria-label="Ordered List"
         >
           <ListOrdered size={16} />
         </ToggleGroupItem>
 
         <ToggleGroupItem
           value="alignRight"
-          aria-label="Align right"
+          type="button"
           onClick={() => editor.chain().focus().setTextAlign("right").run()}
+          aria-label="Align Right"
         >
           <AlignRight size={16} />
         </ToggleGroupItem>

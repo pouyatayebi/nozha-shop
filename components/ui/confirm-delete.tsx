@@ -19,7 +19,10 @@ interface ConfirmDeleteProps {
   children?: React.ReactNode; // آیکون یا متن روی دکمه
 }
 
-export default function ConfirmDelete({ onConfirm, children }: ConfirmDeleteProps) {
+export default function ConfirmDelete({
+  onConfirm,
+  children,
+}: ConfirmDeleteProps) {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
@@ -32,14 +35,15 @@ export default function ConfirmDelete({ onConfirm, children }: ConfirmDeleteProp
         <AlertDialogHeader>
           <AlertDialogTitle className="text-right">حذف رکورد</AlertDialogTitle>
           <AlertDialogDescription className="text-right">
-            آیا مطمئن هستید که می‌خواهید این آیتم را حذف کنید؟ این عمل غیرقابل برگشت است.
+            آیا مطمئن هستید که می‌خواهید این آیتم را حذف کنید؟ این عمل غیرقابل
+            برگشت است.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <AlertDialogFooter>
           <AlertDialogCancel>انصراف</AlertDialogCancel>
           <AlertDialogAction
-            variant="destructive"
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             onClick={onConfirm}
           >
             حذف

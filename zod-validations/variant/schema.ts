@@ -34,4 +34,3 @@ export const variantSchema = z.object({
   imageIds: z.array(z.string().uuid()).default([]),
 });
 
-export type VariantInput = z.infer<typeof variantSchema>;

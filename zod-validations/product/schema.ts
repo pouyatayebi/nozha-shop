@@ -26,4 +26,3 @@ export const productSchema = z.object({
   seoDescription: z.string().default(""),
 });
 
-export type ProductInput = z.infer<typeof productSchema>;

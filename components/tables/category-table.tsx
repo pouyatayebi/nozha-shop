@@ -12,7 +12,6 @@
 // import { toast } from "sonner";
 // import { Category } from "@/lib/generated/prisma";
 
-
 // interface CategoryTableProps {
 //   onEdit: (cat: Category) => void;
 // }
@@ -147,32 +146,32 @@ export default function CategoryTable() {
       toast.error(res.errors?.error?.[0] || "خطا در حذف");
     }
   };
-// ویرایش
-const handleEdit = async (id: string) => {
-  const cat = await getCategoryById(id);
-  if (!cat) return;
+  // ویرایش
+  const handleEdit = async (id: string) => {
+    const cat = await getCategoryById(id);
+    if (!cat) return;
 
-  // فلت کردن فیلدهای تو در تو به فرمت فرم
-  setEditing({
-    id: cat.id,
-    title: cat.title,
-    slug: cat.slug,
-    parentId: cat.parentId,
-    imageId: cat.imageId ?? undefined,
-    description: cat.description?.content ?? "",
-    seoTitle: cat.seo?.title ?? "",
-    seoDescription: cat.seo?.description ?? "",
-  });
-};
+    // فلت کردن فیلدهای تو در تو به فرمت فرم
+    setEditing({
+      id: cat.id,
+      title: cat.title,
+      slug: cat.slug,
+      parentId: cat.parentId,
+      imageId: cat.imageId ?? undefined,
+      description: cat.description?.content ?? "",
+      seoTitle: cat.seo?.title ?? "",
+      seoDescription: cat.seo?.description ?? "",
+    });
+  };
 
   return (
     <div className="overflow-x-auto bg-white rounded-md border border-gray-200">
       <Table>
-        <TableHeader >
-          <TableRow >
-            <TableHead  className="text-right">نام دسته</TableHead>
-            <TableHead  className="text-right">اسلاگ</TableHead>
-            <TableHead  className="text-right">دسته مادر</TableHead>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="text-right">نام دسته</TableHead>
+            <TableHead className="text-right">اسلاگ</TableHead>
+            <TableHead className="text-right">دسته مادر</TableHead>
             <TableHead className="text-center">عملیات</TableHead>
           </TableRow>
         </TableHeader>
@@ -194,7 +193,11 @@ const handleEdit = async (id: string) => {
                   >
                     <Pencil size={16} />
                   </Button>
-                   <ConfirmDelete onConfirm={() => handleDelete(cat.id)} />
+                  <ConfirmDelete
+                    title="حذف دسته"
+                    confirmText="آیا مطمئن هستید که می‌خواهید این دسته را حذف کنید؟"
+                    onConfirm={() => handleDelete(cat.id)}
+                  />
                 </div>
               </TableCell>
             </TableRow>

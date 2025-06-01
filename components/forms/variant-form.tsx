@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import ModalGallery from "@/components/gallery/modal-gallery";
 import Image from "next/image";
 import { X } from "lucide-react";
+import { FormState } from "@/types/form";
 
 export default function VariantForm() {
   const { variantEditing, setVariantEditing, setProducts } = useProductStore();
@@ -53,7 +54,7 @@ export default function VariantForm() {
 
   // Choose create vs edit action:
   const actionFn = useCallback(
-    (_prev, fd: FormData) =>
+    (_prev:FormState, fd: FormData) =>
       variant
         ? editVariantAction(_prev, fd)
         : createVariantAction(_prev, fd),

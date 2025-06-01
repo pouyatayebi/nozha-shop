@@ -8,7 +8,7 @@ export function mapProductToForm(product: Product | null): ProductInput {
       title: "",
       slug: "",
       description: "",
-      categoryId: undefined,
+      categoryId: null,
       isFeatured: false,
       tags: [],
       variants: [{ title: "", stock: 0, price: 0, imageIds: [] }],
@@ -21,7 +21,7 @@ export function mapProductToForm(product: Product | null): ProductInput {
     title: product.title,
     slug: product.slug,
     description: product.description ?? "",
-    categoryId: product.categoryId ?? undefined,
+    categoryId: product.categoryId ?? null,
     isFeatured: product.isFeatured ?? false,
     tags: product.tags,
     // چون در استور قبلاً تبدیل Decimal→number و Image→imageIds انجام شده،

@@ -1,11 +1,17 @@
-import { ProductForm } from "@/components/forms/product-form";
+// app/admin/products/page.tsx
+import ProductForm from "@/components/forms/product-form";
+import ProductTable from "@/components/tables/product-table";
 
-export default function ProductPage() {
+/**
+ * صفحهٔ مدیریت محصولات – فقط کلاینت کامپوننت‌ها را رندر می‌کند.
+ * واکشی محصولات در ProductTable (useEffect) انجام می‌شود،
+ * بنابراین هیچ Decimal از سرور به کلاینت پاس داده نمی‌شود.
+ */
+export default function ProductsPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-semibold mb-4">مدیریت محصولات</h1>
-      <p>در این صفحه محصولات فروشگاه مدیریت می‌شوند.</p>
+    <div className="space-y-6 p-4">
       <ProductForm />
+      <ProductTable />
     </div>
   );
 }

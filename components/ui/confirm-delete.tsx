@@ -1,5 +1,6 @@
 "use client";
 
+import { ReactNode } from "react";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -14,40 +15,42 @@ import {
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 
-interface ConfirmDeleteProps {
-  onConfirm: () => void;
-  children?: React.ReactNode; // آیکون یا متن روی دکمه
+export interface ConfirmDeleteProps {
+  /** عنوان پنجرهٔ تأیید (عنوان دیالوگ) */
+  title: ReactNode;
+  /** متن توضیحی زیر عنوان (اختیاری) */
+  confirmText?: ReactNode;
+  /** تابع اجراشونده پس از تأیید حذف */
+  onConfirm: () => void | Promise<void>;
 }
 
 export default function ConfirmDelete({
+  title,
+  confirmText,
   onConfirm,
-  children,
 }: ConfirmDeleteProps) {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button size="icon" variant="destructive" title="حذف">
-          {children ?? <Trash2 size={16} />}
+        <Button
+          size="icon"
+          variant="destructive"
+          title={typeof title === "string" ? title : undefined}
+        >
+          <Trash2 size={16} />
         </Button>
       </AlertDialogTrigger>
 
-      <AlertDialogContent className="text-right">
+      <AlertDialogContent >
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-right">حذف رکورد</AlertDialogTitle>
-          <AlertDialogDescription className="text-right">
-            آیا مطمئن هستید که می‌خواهید این آیتم را حذف کنید؟ این عمل غیرقابل
-            برگشت است.
-          </AlertDialogDescription>
+          <AlertDialogTitle className="text-right">{title}</AlertDialogTitle>
+          {confirmText && (
+            <AlertDialogDescription>{confirmText}</AlertDialogDescription>
+          )}
         </AlertDialogHeader>
-
         <AlertDialogFooter>
           <AlertDialogCancel>انصراف</AlertDialogCancel>
-          <AlertDialogAction
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            onClick={onConfirm}
-          >
-            حذف
-          </AlertDialogAction>
+          <AlertDialogAction className="bg-destructive hover:bg-red-800" onClick={onConfirm}>حذف</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

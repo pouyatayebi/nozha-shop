@@ -10,7 +10,7 @@ import {
   editVariantAction,
   getAllProducts,
 } from "@/actions/product.actions";
-import { variantSchema, VariantInput } from "@/zod-validations/variant/schema";
+import { variantSchema, VariantInput } from "@/zod-validations/";
 import { useProductStore } from "@/store/product.store";
 import { useImageStore } from "@/store/image.store";
 

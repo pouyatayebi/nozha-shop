@@ -1,7 +1,7 @@
 // components/forms/login-form.tsx
 "use client";
 
-import { useState, useEffect, startTransition } from "react";
+import { useState, useEffect, startTransition, useTransition } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,18 +9,14 @@ import { useActionState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { sendOtpAction, verifyOtpAction } from "@/actions/user.actions";
-import {
-  sendOtpSchema,
-  verifyOtpSchema, // (phone + code)
-} from "@/zod-validations/user/schema";
+import { sendOtpAction } from "@/actions/user.actions";
+import { sendOtpSchema } from "@/zod-validations/user/schema";
 import type { FormState } from "@/types/form";
 
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSlot,
-  InputOTPSeparator,
 } from "@/components/ui/input-otp";
 import {
   Form,
@@ -33,104 +29,118 @@ import {
 import { Button } from "@/components/ui/button";
 
 /* ------------------------------------------------------------------ */
-/* ۱) فرم شمارهٔ تلفن                                                 */
+/* انواع و شِماها                                                     */
 /* ------------------------------------------------------------------ */
-type PhoneForm = { phone: string };
-
-/* ------------------------------------------------------------------ */
-/* ۲) فرم کد تأیید                                                    */
-/* فقط فیلد code را اعتبارسنجی می‌کنیم؛ phone به‌صورت hidden ارسال می‌شود */
-/* ------------------------------------------------------------------ */
-const codeOnlySchema = z.object({
+interface PhoneForm {
+  phone: string;
+}
+const codeSchema = z.object({
   code: z
     .string()
-    .length(6, "کد ۶ رقمی است.")
-    .regex(/^\d{6}$/, "کد باید فقط عدد باشد."),
+    .length(6)
+    .regex(/^\d{6}$/),
 });
-type OtpForm = z.infer<typeof codeOnlySchema>;
+type OtpForm = z.infer<typeof codeSchema>;
 
 export default function LoginForm() {
-  /* ------------------------------------------------------------ */
-  /* وضعیت مرحله و داده‌های جانبی                                  */
-  /* ------------------------------------------------------------ */
   const router = useRouter();
-  const [step, setStep] = useState<"enterPhone" | "enterOtp">("enterPhone");
-  console.log("step",step)
-  const [phoneValue, setPhoneValue] = useState<string>(""); // برای مرحلهٔ OTP
-  const [counter, setCounter] = useState<number>(60); // تایمر ارسال مجدد
 
-  /* ------------------------------------------------------------ */
-  /* فرم شمارهٔ تلفن                                               */
-  /* ------------------------------------------------------------ */
+  /* وضعیت مراحل */
+  const [step, setStep] = useState<"enterPhone" | "enterOtp">("enterPhone");
+  const [phone, setPhone] = useState("");
+  const [counter, setCounter] = useState(60);
+
+  /* ------------------------------------------------------------------ */
+  /* فرم ارسال OTP                                                     */
+  /* ------------------------------------------------------------------ */
   const phoneForm = useForm<PhoneForm>({
     resolver: zodResolver(sendOtpSchema),
     defaultValues: { phone: "" },
     mode: "onTouched",
   });
 
-  const [sendState, sendFormAction, sending] = useActionState(
-    sendOtpAction,
-    { success: false, version: 0 } satisfies FormState
-  );
+  const [sendState, sendFormAction, sending] = useActionState(sendOtpAction, {
+    success: false,
+    version: 0,
+  } satisfies FormState);
 
-  /* پس از ارسال موفق OTP → رفتن به مرحلهٔ بعد */
   useEffect(() => {
     if (sendState.success) {
       toast.success("کد تأیید ارسال شد");
-      setPhoneValue(phoneForm.getValues("phone").trim());
+      setPhone(phoneForm.getValues("phone").trim());
       setStep("enterOtp");
       setCounter(60);
     }
   }, [sendState.version]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* شمارش معکوس 60 ثانیه‌ای برای ارسال مجدد */
+  /* شمارنده ارسال مجدد */
   useEffect(() => {
     if (step !== "enterOtp" || counter === 0) return;
-    const timer = setTimeout(() => setCounter((c) => c - 1), 1000);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setCounter((c) => c - 1), 1000);
+    return () => clearTimeout(t);
   }, [step, counter]);
 
-  /* ------------------------------------------------------------ */
-  /* فرم کد تأیید                                                  */
-  /* ------------------------------------------------------------ */
+  /* ------------------------------------------------------------------ */
+  /* فرم ورود OTP                                                      */
+  /* ------------------------------------------------------------------ */
   const otpForm = useForm<OtpForm>({
-    resolver: zodResolver(codeOnlySchema),
+    resolver: zodResolver(codeSchema),
     defaultValues: { code: "" },
     mode: "onTouched",
   });
 
-  const [verifyState, verifyFormAction, verifying] = useActionState(
-    verifyOtpAction,
-    { success: false, version: 0 } satisfies FormState
-  );
+  const [isPending, startPending] = useTransition();
 
-  /* پس از تأیید موفق → ریدایرکت */
-  useEffect(() => {
-    if (verifyState.success) {
-      toast.success("ورود موفقیت‌آمیز بود");
-      router.push("/user");
-    }
-  }, [verifyState.version, router]);
-
-  /* ------------------------------------------------------------ */
-  /* ارسالِ مجدد کد                                                */
-  /* ------------------------------------------------------------ */
-  const handleResend = () => {
-    if (!phoneValue) return;
-    const fd = new FormData();
-    fd.append("phone", phoneValue);
-    startTransition(() => {
-      sendFormAction(fd);
+/* ---------- verifyOnServer (نسخهٔ نهایی) ---------- */
+const verifyOnServer = otpForm.handleSubmit(({ code }) =>
+  startPending(async () => {
+    const res = await fetch("/api/auth/verify-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, code }),
+      credentials: "include",           // ⬅️ کوکی سشن را بپذیر
     });
-    setCounter(60);
-  };
+   console.log("res",res)
+    /* اگر ریدایرکت دنبال شد یا پاسخ 200 /user است */
+    if (res.ok) {
+      router.replace("/user");
+      toast.success("ورود موفقیت‌آمیز بود");
+      return;
+    }
 
-  /* ------------------------------------------------------------ */
-  /* UI                                                            */
-  /* ------------------------------------------------------------ */
+    /* در صورت ریدایرکت manual یا opaque */
+    if (
+      res.redirected ||
+      (res.status >= 300 && res.status < 400) ||
+      res.type === "opaqueredirect"
+    ) {
+      router.replace(
+        res.headers.get("Location") ?? res.url ?? "/user"
+      );
+      toast.success("ورود موفقیت‌آمیز بود");
+      return;
+    }
+
+    /* خطاها */
+    const { error } = await res.json().catch(() => ({ error: "" }));
+    toast.error(
+      error === "wrong_or_expired"
+        ? "کد نادرست یا منقضی شده"
+        : "خطا در ورود"
+    );
+  })
+);
+
+
+
+
+
+  /* ------------------------------------------------------------------ */
+  /* UI                                                                 */
+  /* ------------------------------------------------------------------ */
   return (
     <div className="max-w-md mx-auto p-4 bg-white rounded shadow">
-      {/* مرحلهٔ ورود شمارهٔ موبایل -------------------------------- */}
+      {/* مرحله ۱: دریافت شماره موبایل */}
       {step === "enterPhone" && (
         <Form {...phoneForm}>
           <form action={sendFormAction} className="space-y-6">
@@ -144,7 +154,7 @@ export default function LoginForm() {
                     <input
                       {...field}
                       type="tel"
-                      className="w-full border rounded p-2 text-left ltr"
+                      className="w-full border rounded p-2 ltr"
                       placeholder="09xxxxxxxxx"
                     />
                   </FormControl>
@@ -152,7 +162,6 @@ export default function LoginForm() {
                 </FormItem>
               )}
             />
-
             <Button type="submit" disabled={sending} className="w-full">
               {sending ? "در حال ارسال..." : "دریافت کد تأیید"}
             </Button>
@@ -160,42 +169,39 @@ export default function LoginForm() {
         </Form>
       )}
 
-      {/* مرحلهٔ ورود کد OTP --------------------------------------- */}
+      {/* مرحله ۲: ورود کد OTP */}
       {step === "enterOtp" && (
         <Form {...otpForm}>
-          <form action={verifyFormAction} className="space-y-6">
-            {/* فیلد مخفی شماره تلفن برای ارسال به اکشن verify */}
-            <input type="hidden" name="phone" value={phoneValue} />
-
+          <form onSubmit={verifyOnServer} className="space-y-6">
             <Controller
               control={otpForm.control}
               name="code"
               render={({ field }) => (
-                <div>
-                  <p className="mb-2">
-                    کد ارسال‌شده به <strong>{phoneValue}</strong> را وارد کنید:
-                  </p>
-
-                  <InputOTP
-                    maxLength={6}
-                    value={field.value}
-                    onChange={field.onChange}
-                  >
-                    <InputOTPGroup>
-                      {Array.from({ length: 6 }).map((_, idx) => (
-                        <InputOTPSlot key={idx} index={idx} />
-                      ))}
-                    </InputOTPGroup>
-                  </InputOTP>
-
-                  <FormMessage>{otpForm.formState.errors.code?.message}</FormMessage>
-                </div>
+                <InputOTP
+                  dir="ltr"
+                  autoFocus
+                  maxLength={6}
+                  value={field.value}
+                  onChange={field.onChange}
+                  className="flex justify-center"
+                >
+                  <InputOTPGroup dir="ltr" className="gap-2">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <InputOTPSlot
+                        key={i}
+                        index={i}
+                        className="w-10 h-10 border rounded text-center"
+                      />
+                    ))}
+                  </InputOTPGroup>
+                </InputOTP>
               )}
             />
+            <FormMessage>{otpForm.formState.errors.code?.message}</FormMessage>
 
             <div className="flex justify-between items-center">
-              <Button type="submit" disabled={verifying}>
-                {verifying ? "در حال بررسی..." : "تأیید کد"}
+              <Button type="submit" disabled={isPending} className="w-32">
+                {isPending ? "در حال بررسی..." : "ورود"}
               </Button>
 
               {counter > 0 ? (
@@ -203,7 +209,16 @@ export default function LoginForm() {
                   ارسال مجدد در {counter} ثانیه
                 </span>
               ) : (
-                <Button variant="ghost" type="button" onClick={handleResend}>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  onClick={() => {
+                    const fd = new FormData();
+                    fd.append("phone", phone);
+                    startTransition(() => sendFormAction(fd));
+                    setCounter(60);
+                  }}
+                >
                   ارسال مجدد کد
                 </Button>
               )}

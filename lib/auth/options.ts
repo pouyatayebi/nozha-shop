@@ -6,10 +6,35 @@ import { PrismaClient, Role } from "@/lib/generated/prisma";
 import type { JWT } from "next-auth/jwt";
 import prisma from "../prisma";
 
-
-
 const authOptions: NextAuthConfig = {
   session: { strategy: "jwt" },
+  callbacks: {
+    async jwt({ token, user, trigger }) {
+      // در هنگام لاگین، role را از user بگیر
+      if (user) {
+        token.id = user.id;
+        token.role = user.role;
+        return token;
+      }
+
+      // بقیهٔ فراخوانی‌ها: نقش را از DB رفرش کن
+      const dbUser = await prisma.user.findUnique({
+        where: { id: token.id as string },
+        select: { role: true },
+      });
+
+      if (dbUser) token.role = dbUser.role;
+      return token;
+    },
+
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
+      }
+      return session;
+    },
+  },
 
   providers: [
     CredentialsProvider({
@@ -20,41 +45,31 @@ const authOptions: NextAuthConfig = {
         code: { label: "OTP Code", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials) {
-          throw new Error("Missing credentials");
-        }
-        const { phone, code } = credentials as {
-          phone: string;
-          code: string;
-        };
+        if (!credentials) throw new Error("Missing credentials");
+        let { phone, code } = credentials as { phone: string; code: string };
 
-        // 1) Fetch the OTP record and validate
-        const otpRecord = await prisma.otp.findUnique({ where: { phone } });
-        if (
-          !otpRecord ||
-          otpRecord.code !== code ||
-          otpRecord.expiresAt < new Date()
-        ) {
+        // ۱) نرمال‌سازی
+        phone = phone.trim();
+        code = code.trim();
+
+        // ۲) واکشی OTP
+        const otp = await prisma.otp.findUnique({ where: { phone } });
+
+        if (!otp || otp.code !== code || otp.expiresAt < new Date()) {
+          console.log("authorize - mismatch");
           throw new Error("Invalid or expired OTP");
         }
 
-        // 2) Delete the OTP (one-time use)
-        await prisma.otp.delete({ where: { phone } });
+        // ۳) حذف (در صورت وجود) - خطا را نادیده بگیر
+        // await prisma.otp.delete({ where: { phone } }).catch(() => {});
 
-        // 3) Find or create the User
+        // ۴) یافتن یا ساخت کاربر
         let user = await prisma.user.findUnique({ where: { phone } });
         if (!user) {
-          user = await prisma.user.create({
-            data: { phone, role: Role.USER },
-          });
+          user = await prisma.user.create({ data: { phone, role: Role.USER } });
         }
 
-        // 4) Return a minimal user object into the JWT
-        return {
-          id: user.id,
-          phone: user.phone,
-          role: user.role,
-        };
+        return { id: user.id, phone: user.phone, role: user.role };
       },
     }),
   ],

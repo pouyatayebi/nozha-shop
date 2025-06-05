@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { requireRole } from "@/lib/auth/guards";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  await requireRole(["ADMIN"]);          // فقط ادمین
   return (
     <div className="min-h-screen flex">
       <aside className="w-64 bg-gray-800 text-white p-4 space-y-4">

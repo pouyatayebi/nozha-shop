@@ -74,22 +74,7 @@ const authOptions: NextAuthConfig = {
     }),
   ],
 
-  callbacks: {
-    async jwt({ token, user }: { token: JWT; user?: any }) {
-      if (user) {
-        token.id = (user as { id: string }).id;
-        token.role = (user as { role: Role }).role;
-      }
-      return token;
-    },
-    async session({ session, token }: { session: any; token: JWT }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
-      }
-      return session;
-    },
-  },
+ 
 
   pages: {
     signIn: "/auth/login",

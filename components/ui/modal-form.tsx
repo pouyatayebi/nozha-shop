@@ -31,7 +31,7 @@ export function ModalForm({
 }: ModalFormProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl w-full">
+      <DialogContent className="lg:max-w-lg w-full">
         <DialogHeader>
           <DialogTitle className="flex justify-between items-center">
             <span>{title}</span>

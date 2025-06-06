@@ -1,111 +1,13 @@
-// "use client";
-
-// import { useState, useEffect } from "react";
-// import {
-//   getAllCategories,
-//   deleteCategoryAction,
-// } from "@/actions/category.actions";
-// import { useCategoryStore } from "@/store/category.store";
-// import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-// import { Button } from "@/components/ui/button";
-// import { Pencil, Trash2 } from "lucide-react";
-// import { toast } from "sonner";
-// import { Category } from "@/lib/generated/prisma";
-
-// interface CategoryTableProps {
-//   onEdit: (cat: Category) => void;
-// }
-
-// export default function CategoryTable({ onEdit }: CategoryTableProps) {
-//   const categories = useCategoryStore((s) => s.categories);
-//   const setCategories = useCategoryStore((s) => s.setCategories);
-//   const [loading, setLoading] = useState(false);
-
-//   const load = async () => {
-//     setLoading(true);
-//     const data = await getAllCategories();
-//     setCategories(data);
-//     setLoading(false);
-//   };
-
-//   useEffect(() => {
-//     load();
-//   }, []);
-
-//   const handleDelete = async (id: string) => {
-//     if (!confirm("مطمئنی حذف کنی؟")) return;
-//     const res = await deleteCategoryAction(id);
-//     if (res.success) {
-//       toast.success("حذف شد");
-//       load();
-//     } else {
-//       toast.error(res.errors?.error?.[0] || "خطا در حذف");
-//     }
-//   };
-
-//   return (
-//     <div className="overflow-x-auto bg-white rounded-md border border-gray-200">
-//       <Table>
-//         <TableHeader>
-//           <TableRow>
-//             <TableHead>نام دسته</TableHead>
-//             <TableHead>اسلاگ</TableHead>
-//             <TableHead>دسته مادر</TableHead>
-//             <TableHead className="text-center">عملیات</TableHead>
-//           </TableRow>
-//         </TableHeader>
-//         <TableBody>
-//           {categories.map((cat) => (
-//             <TableRow key={cat.id}>
-//               <TableCell>{cat.title}</TableCell>
-//               <TableCell>{cat.slug}</TableCell>
-//               <TableCell>
-//                 {categories.find((c) => c.id === cat.parentId)?.title || "-"}
-//               </TableCell>
-//               <TableCell className="text-center">
-//                 <div className="flex justify-center gap-2">
-//                   <Button
-//                     size="icon"
-//                     variant="outline"
-//                     onClick={() => onEdit(cat)}
-//                     title="ویرایش"
-//                   >
-//                     <Pencil size={16} />
-//                   </Button>
-//                   <Button
-//                     size="icon"
-//                     variant="destructive"
-//                     onClick={() => handleDelete(cat.id)}
-//                     title="حذف"
-//                   >
-//                     <Trash2 size={16} />
-//                   </Button>
-//                 </div>
-//               </TableCell>
-//             </TableRow>
-//           ))}
-//           {!loading && categories.length === 0 && (
-//             <TableRow>
-//               <TableCell colSpan={4} className="text-center py-4">
-//                 یافت نشد
-//               </TableCell>
-//             </TableRow>
-//           )}
-//         </TableBody>
-//       </Table>
-//     </div>
-//   );
-// }
 // components/tables/category-table.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   getAllCategories,
   deleteCategoryAction,
   getCategoryById,
 } from "@/actions/category.actions";
-import { useCategoryStore } from "@/store/category.store";
+import { useCategoryStore, type Category } from "@/store/category.store";
 import {
   Table,
   TableHeader,
@@ -115,103 +17,146 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil } from "lucide-react";
+import ConfirmDelete from "@/components/ui/confirm-delete";
 import { toast } from "sonner";
-import ConfirmDelete from "../ui/confirm-delete";
+import { ModalForm } from "@/components/ui/modal-form";
+import CategoryForm from "@/components/forms/category-form";
 
 export default function CategoryTable() {
-  const { categories, setCategories, setEditing } = useCategoryStore();
-  const [loading, setLoading] = useState(false);
+  const categories = useCategoryStore((s) => s.categories);
+  const setCategories = useCategoryStore((s) => s.setCategories);
+  const setEditing = useCategoryStore((s) => s.setEditing);
+  const editing = useCategoryStore((s) => s.editing);
 
-  // واکشی اولیه
-  const load = async () => {
+  const [loading, setLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  /* -------------------------- بارگذاری لیست -------------------------- */
+  const load = useCallback(async () => {
     setLoading(true);
     const data = await getAllCategories();
-    setCategories(data);
+    setCategories(data); // اکنون data: Category[] است
     setLoading(false);
-  };
+  }, [setCategories]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
-  // حذف
-  const handleDelete = async (id: string) => {
-    if (!confirm("مطمئنی حذف کنی؟")) return;
-    const res = await deleteCategoryAction(id);
-    if (res.success) {
-      toast.success("حذف شد");
-      load(); // رفرش لیست
-    } else {
-      toast.error(res.errors?.error?.[0] || "خطا در حذف");
-    }
+  /* ---------------------------- حذف دسته ----------------------------- */
+  const handleDelete = useCallback(
+    async (id: string) => {
+      const res = await deleteCategoryAction(id);
+      if (res.success) {
+        toast.success("حذف شد");
+        setCategories(categories.filter((c) => c.id !== id));
+      } else {
+        toast.error(res.errors?.error?.[0] || "خطا در حذف");
+      }
+    },
+    [categories, setCategories]
+  );
+
+  /* ---------------------------- ویرایش ------------------------------- */
+  const handleEdit = useCallback(
+    async (id: string) => {
+      const cat = await getCategoryById(id);
+      if (!cat) return;
+      setEditing(cat);
+      setModalOpen(true);
+    },
+    [setEditing]
+  );
+
+  /* -------------------------- افزودن دسته ---------------------------- */
+  const handleAdd = () => {
+    setEditing(null);
+    setModalOpen(true);
   };
-  // ویرایش
-  const handleEdit = async (id: string) => {
-    const cat = await getCategoryById(id);
-    if (!cat) return;
 
-    // فلت کردن فیلدهای تو در تو به فرمت فرم
-    setEditing({
-      id: cat.id,
-      title: cat.title,
-      slug: cat.slug,
-      parentId: cat.parentId,
-      imageId: cat.imageId ?? undefined,
-      description: cat.description?.content ?? "",
-      seoTitle: cat.seo?.title ?? "",
-      seoDescription: cat.seo?.description ?? "",
+  /* ------------------ نگاشت عنوان والد برای دسترسی سریع ------------------ */
+  const parentTitleMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    categories.forEach((c) => {
+      map[c.id] = c.title;
     });
+    return map;
+  }, [categories]);
+
+  /* ------------------ بستن مودال فرم دسته‌بندی ------------------ */
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditing(null);
   };
 
   return (
-    <div className="overflow-x-auto bg-white rounded-md border border-gray-200">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="text-right">نام دسته</TableHead>
-            <TableHead className="text-right">اسلاگ</TableHead>
-            <TableHead className="text-right">دسته مادر</TableHead>
-            <TableHead className="text-center">عملیات</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {categories.map((cat) => (
-            <TableRow key={cat.id}>
-              <TableCell>{cat.title}</TableCell>
-              <TableCell>{cat.slug}</TableCell>
-              <TableCell>
-                {categories.find((c) => c.id === cat.parentId)?.title || "-"}
-              </TableCell>
-              <TableCell className="text-center">
-                <div className="flex justify-center gap-2">
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={() => handleEdit(cat.id)}
-                    title="ویرایش"
-                  >
-                    <Pencil size={16} />
-                  </Button>
-                  <ConfirmDelete
-                    title="حذف دسته"
-                    confirmText="آیا مطمئن هستید که می‌خواهید این دسته را حذف کنید؟"
-                    onConfirm={() => handleDelete(cat.id)}
-                  />
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
+    <>
+      {/* دکمهٔ افزودن دسته جدید */}
+      <div className="flex justify-start mb-4">
+        <Button onClick={handleAdd}>افزودن دسته</Button>
+      </div>
 
-          {!loading && categories.length === 0 && (
+      <div className="overflow-x-auto rounded-md border border-gray-200 bg-white">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={4} className="text-center py-4">
-                هیچ دسته‌ای یافت نشد
-              </TableCell>
+              <TableHead className="text-right">نام دسته</TableHead>
+              <TableHead className="text-right">اسلاگ</TableHead>
+              <TableHead className="text-right">دستهٔ مادر</TableHead>
+              <TableHead className="text-center">عملیات</TableHead>
             </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+
+          <TableBody>
+            {categories.map((cat) => (
+              <TableRow key={cat.id}>
+                <TableCell>{cat.title}</TableCell>
+                <TableCell>{cat.slug}</TableCell>
+                <TableCell>{parentTitleMap[cat.parentId ?? ""] || "-"}</TableCell>
+                <TableCell className="text-center">
+                  <div className="flex justify-center gap-2">
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      title="ویرایش"
+                      onClick={() => handleEdit(cat.id)}
+                    >
+                      <Pencil size={16} />
+                    </Button>
+
+                    <ConfirmDelete
+                      title="حذف دسته"
+                      confirmText="آیا مطمئن هستید که می‌خواهید این دسته را حذف کنید؟"
+                      onConfirm={() => handleDelete(cat.id)}
+                    />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+
+            {!loading && categories.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={4} className="py-4 text-center">
+                  هیچ دسته‌ای یافت نشد
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* مودال فرم دسته‌بندی */}
+      <ModalForm
+        title={editing ? "ویرایش دسته‌بندی" : "افزودن دسته‌بندی"}
+        open={modalOpen}
+        onOpenChange={(open) => {
+          if (!open) closeModal();
+          else setModalOpen(open);
+        }}
+      >
+        <CategoryForm onClose={closeModal} />
+      </ModalForm>
+    </>
   );
 }

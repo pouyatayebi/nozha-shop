@@ -10,7 +10,10 @@ import ProductTable from "@/components/tables/product-table";
 export default function ProductsPage() {
   return (
     <div className="space-y-6 p-4">
-      <ProductForm />
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold">مدیریت محصولات </h1>
+
+      </div>
       <ProductTable />
     </div>
   );

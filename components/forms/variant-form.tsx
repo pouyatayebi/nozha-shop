@@ -1,3 +1,4 @@
+// components/forms/variant-form.tsx
 "use client";
 
 import { useEffect, useCallback, useActionState } from "react";
@@ -10,7 +11,7 @@ import {
   editVariantAction,
   getAllProducts,
 } from "@/actions/product.actions";
-import { variantSchema, VariantInput } from "@/zod-validations/";
+import { variantSchema, VariantInput } from "@/zod-validations";
 import { useProductStore } from "@/store/product.store";
 import { useImageStore } from "@/store/image.store";
 
@@ -24,20 +25,16 @@ import {
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import ModalGallery from "@/components/gallery/modal-gallery";
-import Image from "next/image";
-import { X } from "lucide-react";
+import ImagePreview from "@/components/gallery/image-preview";
 import { FormState } from "@/types/form";
 
 export default function VariantForm() {
   const { variantEditing, setVariantEditing, setProducts } = useProductStore();
   const { images } = useImageStore();
 
-  // If there is no active variantEditing state, render nothing:
   if (!variantEditing) return null;
-
   const { productId, variant } = variantEditing;
 
-  // Map existing edit‐state or defaults into defaultValues:
   const defaultValues: VariantInput = {
     title: variant?.title ?? "",
     price: variant?.price ?? 0,
@@ -45,16 +42,14 @@ export default function VariantForm() {
     imageIds: variant?.imageIds ?? [],
   };
 
-  // Initialize react-hook-form
   const form = useForm<VariantInput>({
     resolver: zodResolver(variantSchema) as Resolver<VariantInput>,
     defaultValues,
     mode: "onTouched",
   });
 
-  // Choose create vs edit action:
   const actionFn = useCallback(
-    (_prev:FormState, fd: FormData) =>
+    (_prev: FormState, fd: FormData) =>
       variant
         ? editVariantAction(_prev, fd)
         : createVariantAction(_prev, fd),
@@ -66,30 +61,26 @@ export default function VariantForm() {
     version: 0,
   });
 
-  // After successful create or edit:
   useEffect(() => {
-    if (state.success) {
-      toast.success(
-        variant ? "ویرایش واریانت موفق" : "واریانت اضافه شد"
-      );
-      setVariantEditing(null);
-      getAllProducts().then(setProducts);
-    }
+    if (!state.success) return;
+    toast.success(variant ? "ویرایش واریانت موفق" : "واریانت اضافه شد");
+    setVariantEditing(null);
+    getAllProducts().then(setProducts);
   }, [state.version, variant, setVariantEditing, setProducts]);
 
-  // Watch the selected image IDs array
   const watchedImageIds: string[] = form.watch("imageIds") ?? [];
 
-  // Helper to remove a single image ID from the array:
   const removeImageId = (idToRemove: string) => {
-    const updated = watchedImageIds.filter((id) => id !== idToRemove);
-    form.setValue("imageIds", updated);
+    form.setValue(
+      "imageIds",
+      watchedImageIds.filter((id) => id !== idToRemove)
+    );
   };
 
   return (
     <Form {...form}>
       <form action={formAction} className="space-y-4">
-        {/* ————— Title ————— */}
+        {/* نام واریانت */}
         <FormField
           control={form.control}
           name="title"
@@ -108,7 +99,7 @@ export default function VariantForm() {
           )}
         />
 
-        {/* ————— Price ————— */}
+        {/* قیمت */}
         <FormField
           control={form.control}
           name="price"
@@ -128,7 +119,7 @@ export default function VariantForm() {
           )}
         />
 
-        {/* ————— Stock ————— */}
+        {/* موجودی */}
         <FormField
           control={form.control}
           name="stock"
@@ -147,7 +138,7 @@ export default function VariantForm() {
           )}
         />
 
-        {/* ————— Images (multi-select) ————— */}
+        {/* تصاویر (انتخاب چندگانه) */}
         <FormField
           control={form.control}
           name="imageIds"
@@ -157,35 +148,15 @@ export default function VariantForm() {
               <FormControl>
                 <div className="space-y-2">
                   <div className="flex flex-wrap gap-2">
-                    {watchedImageIds.map((imgId) => {
-                      const url = images.find((im) => im.id === imgId)?.url;
-                      return (
-                        <div
-                          key={imgId}
-                          className="relative w-20 h-20 border rounded overflow-hidden"
-                        >
-                          {url && (
-                            <Image
-                              src={url}
-                              alt="تصویر واریانت"
-                              width={80}
-                              height={80}
-                              className="object-cover w-full h-full"
-                            />
-                          )}
-                          {/* Red × button at top‐right */}
-                          <button
-                            type="button"
-                            onClick={() => removeImageId(imgId)}
-                            className="absolute top-0 right-0 bg-white rounded-full text-red-500 w-5 h-5 flex items-center justify-center text-[10px]"
-                          >
-                            <X size={12} />
-                          </button>
-                        </div>
-                      );
-                    })}
+                    {watchedImageIds.map((imgId) => (
+                      <ImagePreview
+                        key={imgId}
+                        ids={[imgId]}
+                        onRemove={() => removeImageId(imgId)}
+                        size={80}
+                      />
+                    ))}
                   </div>
-
                   <ModalGallery
                     selectedIds={watchedImageIds}
                     onSelect={(newIds) => field.onChange(newIds)}
@@ -198,18 +169,16 @@ export default function VariantForm() {
           )}
         />
 
-        {/* ————— Hidden fields ————— */}
+        {/* فیلدهای مخفی */}
         <input type="hidden" name="productId" value={productId} />
         {variant && <input type="hidden" name="id" value={variant.id} />}
-
-        {/* We still need to send the selected IDs as JSON */}
         <input
           type="hidden"
           name="imageIds"
           value={JSON.stringify(watchedImageIds)}
         />
 
-        {/* ————— Action Buttons ————— */}
+        {/* دکمه‌های عمل */}
         <div className="flex justify-end gap-2">
           <Button
             variant="outline"

@@ -1,39 +1,37 @@
+// components/forms/category-form.tsx
 "use client";
 
+import {
+  useEffect,
+  useCallback,
+  useMemo,
+  startTransition,
+  useActionState,
+} from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  useActionState,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { toast } from "sonner";
+
 import {
   createCategoryAction,
   editCategoryAction,
   getAllCategories,
 } from "@/actions/category.actions";
-import { categorySchema, CategoryInput } from "@/zod-validations";
-import { toast } from "sonner";
+import { categorySchema, type CategoryInput } from "@/zod-validations";
+import { mapCategoryToForm } from "@/helpers/mapCategoryToForm";
+
+import { useCategoryStore } from "@/store/category.store";
+import { useImageStore } from "@/store/image.store";
+import ParentCategorySelect from "@/components/forms/parent-category-select";
+
 import {
   Form,
-  FormControl,
   FormField,
   FormItem,
   FormLabel,
+  FormControl,
   FormMessage,
 } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
-import { FormInputShadcn } from "@/components/forms/form-input-shadcn";
-import { FormFrame } from "@/components/forms/form-frame";
-import { Plus } from "lucide-react";
-import {
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from "@/components/ui/accordion";
 import {
   Select,
   SelectContent,
@@ -41,294 +39,268 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCategoryStore } from "@/store/category.store";
+import { Button } from "@/components/ui/button";
+import { FormFrame } from "@/components/forms/form-frame";
 import ModalGallery from "@/components/gallery/modal-gallery";
-import { useImageStore } from "@/store/image.store";
-import Image from "next/image";
+import ImagePreview from "@/components/gallery/image-preview";
+import RichText from "@/components/forms/rich-text";
+import { FormInputShadcn } from "./form-input-shadcn";
 
-import { mapCategoryToForm } from "@/helpers/mapCategoryToForm";
-import RichText from "./rich-text";
+interface CategoryFormProps {
+  onClose: () => void;
+}
 
-export default function CategoryForm() {
-  const { editing, setEditing, setCategories } = useCategoryStore();
+export default function CategoryForm({ onClose }: CategoryFormProps) {
+  /* Zustand */
+  const editing = useCategoryStore((s) => s.editing);
+  const setEditing = useCategoryStore((s) => s.setEditing);
+  const categories = useCategoryStore((s) => s.categories);
+  const setCategories = useCategoryStore((s) => s.setCategories);
   const { images } = useImageStore();
 
-  // حالت باز/بسته آکاردئون
-  const [open, setOpen] = useState<string>(""); // "" = بسته
-  const [formKey, setFormKey] = useState(0);
-
-  // فرم
+  /* React Hook Form */
+  const defaultValues = useMemo<CategoryInput>(
+    () => mapCategoryToForm(editing),
+    [editing]
+  );
   const form = useForm<CategoryInput>({
     resolver: zodResolver(categorySchema),
-    defaultValues: mapCategoryToForm(editing),
+    defaultValues,
     mode: "onTouched",
   });
 
-  // اکشن متناسب با حالت
-  const actionFn = useCallback(
-    editing ? editCategoryAction : createCategoryAction,
-    [editing?.id] // ← تغییرِ id باعث تغییر تابع و ریست هُک می‌شود
+  /* action states */
+  const [createState, createAction, createPending] = useActionState(
+    createCategoryAction,
+    { success: false, version: 0 }
+  );
+  const [editState, editAction, editPending] = useActionState(
+    editCategoryAction,
+    { success: false, version: 0 }
   );
 
-  const [formState, formAction, isPending] = useActionState(actionFn, {
-    success: false,
-    version: 0,
-  });
+  const formAction  = editing ? editAction   : createAction;
+  const actionState = editing ? editState    : createState;
+  const isPending   = editing ? editPending  : createPending;
 
-  // ① وقتی editing تغییر کند، فرم را با مقادیرش ریست و آکاردئون را باز کن
+  /* وقتی editing تغییر کند فرم را ریست کن */
   useEffect(() => {
-    if (editing) {
+    if (!editing) {
+      form.reset(mapCategoryToForm(null));
+    } else {
       form.reset(mapCategoryToForm(editing));
-      setOpen("category-form");
     }
-  }, [editing]);
+  }, [editing?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // پس از موفقیت
-  // --- پس از موفقیت ---
+  /* پس از ثبت موفق */
   useEffect(() => {
-    if (formState.success) {
-      toast.success(editing ? "ویرایش شد" : "ثبت شد");
-      form.reset(); // مقادیر خالی
-      setEditing(null);
-      setOpen(""); // بستن
-      setFormKey((k) => k + 1); // فورس ری‌مونت فرم
+    if (!actionState.success) return;
+
+    toast.success(editing ? "ویرایش شد" : "ثبت شد");
+    setEditing(null);
+    onClose();
+
+    startTransition(() => {
       getAllCategories().then(setCategories);
-    }
-  }, [formState.version]); // نسخه هنوز لازم است
+    });
+  }, [actionState.version]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* گزینه‌های دستهٔ مادر */
+  const parentOptions = useMemo(
+    () =>
+      categories
+        .filter((c) => c.id !== editing?.id)
+        .map((c) => (
+          <SelectItem key={c.id} value={c.id}>
+            {c.title}
+          </SelectItem>
+        )),
+    [categories, editing?.id]
+  );
+
   return (
-    <Accordion
-      type="single"
-      collapsible
-      className="w-full"
-      value={open}
-      onValueChange={setOpen}
-    >
-      <AccordionItem value="category-form">
-        <AccordionTrigger>
-          <span className="flex gap-2 items-center">
-            <Plus size={18} />
-            {editing ? "ویرایش دسته‌بندی" : "افزودن دسته‌بندی جدید"}
-          </span>
-        </AccordionTrigger>
+    <FormFrame>
+      <Form {...form}>
+        <form
+          action={formAction}
+          className="space-y-6 rounded-xl border bg-white p-6 shadow"
+        >
+          {editing && (
+            <input type="hidden" name="id" value={editing.id} />
+          )}
 
-        <AccordionContent>
-          <FormFrame>
-            <Form {...form} key={formKey}>
-              <form
-                action={formAction}
-                className="space-y-6 rounded-xl bg-white shadow p-6 border"
-              >
-                {/* ردیف ۱: عنوان، اسلاگ، دسته مادر و تصویر*/}
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  {/* title / slug / parent/image */}
+          {/* ردیف ۱: عنوان و اسلاگ */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>عنوان</FormLabel>
+                  <FormControl>
+                    <FormInputShadcn {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="slug"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>اسلاگ</FormLabel>
+                  <FormControl>
+                    <FormInputShadcn {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>عنوان</FormLabel>
-                        <FormControl>
-                          <FormInputShadcn {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="slug"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>اسلاگ</FormLabel>
-                        <FormControl>
-                          <FormInputShadcn {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
+          {/* ردیف ۲: دستهٔ مادر و تصویر */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="parentId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>دستهٔ مادر</FormLabel>
+                  <FormControl>
+                    <ParentCategorySelect
+                      categories={categories}
+                      value={field.value}
+                      onChange={field.onChange}
+                      excludeId={editing?.id}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                  <input
+                    type="hidden"
                     name="parentId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>دسته مادر</FormLabel>
-                        <FormControl>
-                          <div>
-                            <Select
-                              value={field.value ?? "none"}
-                              onValueChange={(val) =>
-                                field.onChange(val === "none" ? undefined : val)
-                              }
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="بدون دسته" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {/* گزینهٔ پیش‌فرض */}
-                                <SelectItem value="none">بدون دسته</SelectItem>
-
-                                {/* گزینه‌های واقعی از استور */}
-                                {useCategoryStore
-                                  .getState()
-                                  .categories.map((c) => (
-                                    <SelectItem key={c.id} value={c.id}>
-                                      {c.title}
-                                    </SelectItem>
-                                  ))}
-                              </SelectContent>
-                            </Select>
-
-                            {/* هیدن برای ارسال به اکشن */}
-                            <input
-                              type="hidden"
-                              name="parentId"
-                              value={field.value ?? ""}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    value={field.value ?? ""}
                   />
-                  <FormField
-                    control={form.control}
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="imageId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>تصویر دسته‌بندی</FormLabel>
+                  <FormControl>
+                    <div className="space-y-2">
+                      <ImagePreview
+                        ids={field.value ? [field.value] : []}
+                        onRemove={() => field.onChange("")}
+                        size={80}
+                      />
+                      <ModalGallery
+                        selectedIds={field.value ? [field.value] : undefined}
+                        onSelect={(ids) => field.onChange(ids[0])}
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                  <input
+                    type="hidden"
                     name="imageId"
-                    render={({ field }) => {
-                      const imgUrl =
-                        field.value &&
-                        images.find((img) => img.id === field.value)?.url;
-
-                      return (
-                        <FormItem>
-                          <FormLabel>تصویر دسته‌بندی</FormLabel>
-                          <FormControl>
-                            <div className="space-y-2">
-                              {imgUrl && (
-                                <div className="relative w-32 h-32 border rounded overflow-hidden group">
-                                  <Image
-                                    src={imgUrl}
-                                    alt="پیش‌نمایش"
-                                    width={128}
-                                    height={128}
-                                    className="object-cover w-full h-full"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => field.onChange(undefined)}
-                                    className="absolute top-1 right-1 bg-white rounded-full w-6 h-6 flex items-center justify-center text-sm text-red-500"
-                                    aria-label="حذف"
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              )}
-
-                              <ModalGallery
-                                onSelect={(id) => field.onChange(id)}
-                              />
-                              <input
-                                type="hidden"
-                                name="imageId"
-                                value={field.value || ""}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      );
-                    }}
+                    value={field.value ?? ""}
                   />
-                </div>
+                </FormItem>
+              )}
+            />
+          </div>
 
-                {/* توضیحات */}
-                <FormField
-                  control={form.control}
+          {/* توضیحات (پهنای کامل) */}
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>توضیحات</FormLabel>
+                <FormControl>
+                  <RichText
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                  />
+                </FormControl>
+                <FormMessage />
+                <input
+                  type="hidden"
                   name="description"
-                  render={({ field }) => (
-                    <FormItem className="lg:col-span-3">
-                      <FormLabel>توضیحات</FormLabel>
-                      <FormControl>
-                        <div>
-                          <RichText
-                            value={field.value || ""}
-                            onChange={field.onChange}
-                          />
-                          <input
-                            type="hidden"
-                            name="description"
-                            value={field.value || ""}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  value={field.value ?? ""}
                 />
+              </FormItem>
+            )}
+          />
 
-                {/* ========= اطلاعات سئو (اختیاری) ========= */}
-                <Accordion type="single" collapsible className="w-full">
-                  <AccordionItem value="seo">
-                    <AccordionTrigger className="text-muted-foreground">
-                      اطلاعات سئو (اختیاری)
-                    </AccordionTrigger>
-                    <AccordionContent className="grid sm:grid-cols-2 gap-4 pt-4">
-                      <FormField
-                        control={form.control}
-                        name="seoTitle"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>عنوان سئو</FormLabel>
-                            <FormControl>
-                              <FormInputShadcn {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="seoDescription"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>توضیح سئو</FormLabel>
-                            <FormControl>
-                              <FormInputShadcn {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+          {/* ردیف ۳: عنوان سئو و توضیح سئو */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="seoTitle"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>عنوان سئو (اختیاری)</FormLabel>
+                  <FormControl>
+                    <FormInputShadcn {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="seoDescription"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>توضیح سئو (اختیاری)</FormLabel>
+                  <FormControl>
+                    <FormInputShadcn {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-                      {/* آی‌دی برای ویرایش */}
-                      <input
-                        type="hidden"
-                        name="id"
-                        value={editing?.id || ""}
-                      />
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
+          {/* دکمه‌های ثبت و لغو */}
+          <div className="flex gap-3">
+            <Button
+              disabled={isPending}
+              className="flex-1"
+              aria-busy={isPending}
+            >
+              {isPending
+                ? editing
+                  ? "در حال ویرایش..."
+                  : "در حال ذخیره..."
+                : editing
+                ? "ذخیرهٔ تغییرات"
+                : "ثبت دسته‌بندی"}
+            </Button>
 
-                <Button
-                  disabled={isPending}
-                  className="w-full lg:sticky lg:bottom-4 lg:left-0 lg:right-0"
-                >
-                  {isPending
-                    ? editing
-                      ? "در حال ویرایش..."
-                      : "در حال ذخیره..."
-                    : editing
-                    ? "ذخیره تغییرات"
-                    : "ثبت دسته‌بندی"}
-                </Button>
-              </form>
-            </Form>
-          </FormFrame>
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+            {editing && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-28"
+                disabled={isPending}
+                onClick={() => {
+                  setEditing(null);
+                  form.reset();
+                  onClose();
+                }}
+              >
+                لغو
+              </Button>
+            )}
+          </div>
+        </form>
+      </Form>
+    </FormFrame>
   );
 }

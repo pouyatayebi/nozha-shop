@@ -45,7 +45,7 @@ export default function ConfirmDelete({
         <AlertDialogHeader>
           <AlertDialogTitle className="text-right">{title}</AlertDialogTitle>
           {confirmText && (
-            <AlertDialogDescription>{confirmText}</AlertDialogDescription>
+            <AlertDialogDescription className="text-right">{confirmText}</AlertDialogDescription>
           )}
         </AlertDialogHeader>
         <AlertDialogFooter>

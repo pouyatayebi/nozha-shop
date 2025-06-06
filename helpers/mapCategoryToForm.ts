@@ -1,10 +1,14 @@
 // helpers/mapCategoryToForm.ts
 import { CategoryInput } from "@/zod-validations";
-import { Category } from "@/store/category.store"; // یا مدل Prisma
+import type { Category } from "@/store/category.store";
 
+/**
+ * مقادیر پیش‌فرض فرم دسته‌بندی را بر اساس شیء Category تولید می‌کند.
+ * اگر cat تهی باشد، فرم در حالت «افزودن» قرار می‌گیرد.
+ */
 export function mapCategoryToForm(cat: Category | null): CategoryInput {
   if (!cat) {
-    // مقادیر خالی برای حالت افزودن
+    // حالت افزودن
     return {
       title: "",
       slug: "",
@@ -15,6 +19,8 @@ export function mapCategoryToForm(cat: Category | null): CategoryInput {
       seoDescription: "",
     };
   }
+
+  // حالت ویرایش
   return {
     title: cat.title,
     slug: cat.slug,
@@ -25,3 +31,4 @@ export function mapCategoryToForm(cat: Category | null): CategoryInput {
     seoDescription: cat.seoDescription ?? "",
   };
 }
+// این تابع به شما امکان می‌دهد تا مقادیر فرم را بر اساس دسته‌بندی موجود تنظیم کنید.

@@ -118,6 +118,7 @@
 //   );
 // }
 
+
 // components/gallery/modal-gallery.tsx
 "use client";
 
@@ -137,7 +138,7 @@ import { X } from "lucide-react";
 interface GalleryImage {
   id: string;
   url: string;
-  alt?: string;
+  alt: string;
   name?: string;
   type?: string;
   size?: number;
@@ -167,14 +168,17 @@ export default function ModalGallery({
       const { getImages } = await import("@/actions/image.actions");
       const result = await getImages();
       if (Array.isArray(result)) {
-        // Map null fields to undefined
+        // Map null fields to undefined or empty string
         const sanitized: GalleryImage[] = result.map((img) => ({
           id: img.id,
           url: img.url,
           alt: img.name ?? "",
           name: img.name ?? undefined,
           type: img.type ?? undefined,
-          size: img.size !== null && img.size !== undefined ? Number(img.size) : undefined,
+          size:
+            img.size !== null && img.size !== undefined
+              ? Number(img.size)
+              : undefined,
           variantId: img.variantId ?? undefined,
         }));
         setImages(sanitized);
@@ -234,7 +238,7 @@ export default function ModalGallery({
               >
                 <Image
                   src={img.url}
-                  alt={img.alt ?? ""}
+                  alt={img.alt}
                   width={200}
                   height={200}
                   className="object-cover w-full h-32"
@@ -268,4 +272,3 @@ export default function ModalGallery({
     </Dialog>
   );
 }
-

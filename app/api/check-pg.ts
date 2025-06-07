@@ -1,17 +1,11 @@
-// pages/api/check-pg.ts
-import { Client } from "pg";
+// pages/api/env.ts
+import type { NextApiRequest, NextApiResponse } from "next";
 
-export default async function handler(req, res) {
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+export default function handler(
+  _req: NextApiRequest,       // ← اینجا _req به جای req
+  res: NextApiResponse
+) {
+  res.status(200).json({
+    DATABASE_URL: process.env.DATABASE_URL,
   });
-  try {
-    await client.connect();
-    const { rows } = await client.query("SELECT NOW()");
-    await client.end();
-    res.status(200).json({ ok: true, now: rows[0] });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
-  }
 }

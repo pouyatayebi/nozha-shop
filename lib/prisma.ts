@@ -1,47 +1,36 @@
-// import { PrismaClient } from './generated/prisma'
-// import { withAccelerate } from '@prisma/extension-accelerate'
-
-// const globalForPrisma = global as unknown as { 
-//     prisma: PrismaClient
-// }
-
-// const prisma = globalForPrisma.prisma || new PrismaClient().$extends(withAccelerate())
-
-// if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
-
-// export default prisma
-
-
-
 // lib/prisma.ts
-
 import { PrismaNeon } from '@prisma/adapter-neon';
 import { neonConfig } from '@neondatabase/serverless';
 import WebSocket from 'ws';
 import { PrismaClient } from './generated/prisma';
 
-// برای اینکه PrismaNeon بتواند از WebSocket استفاده کند
+// Configure Neon to use WebSocket in serverless environments
 neonConfig.webSocketConstructor = WebSocket;
 
 declare global {
-  // جلوگیری از ایجاد چند نمونه در محیط توسعه
+  // Ensure we reuse the PrismaClient in development to avoid exhausting connections
   var prisma: PrismaClient | undefined;
 }
 
+// Initialize the Neon adapter with your DATABASE_URL
 const adapter = new PrismaNeon({
   connectionString: process.env.DATABASE_URL!,
 });
 
-export const prisma =
+// Create or reuse the PrismaClient instance
+const prismaClient =
   global.prisma ??
   new PrismaClient({
     adapter,
-    // log: ['query', 'info', 'warn', 'error'], // (اختیاری)
+    // Optional: enable query logging
+    // log: ['query', 'info', 'warn', 'error'],
   });
 
+// In development, assign the client to the global object
 if (process.env.NODE_ENV !== 'production') {
-  global.prisma = prisma;
+  global.prisma = prismaClient;
 }
 
-
-export default prisma;
+// Default export for easy `import prisma from '@/lib/prisma'`
+export default prismaClient;
+export { PrismaClient, PrismaNeon }; // Export for direct access if needed

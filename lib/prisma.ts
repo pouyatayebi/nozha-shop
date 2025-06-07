@@ -1,36 +1,35 @@
 // lib/prisma.ts
-import { PrismaNeon } from '@prisma/adapter-neon';
-import { neonConfig } from '@neondatabase/serverless';
+import 'dotenv/config';
 import WebSocket from 'ws';
+import { neonConfig } from '@neondatabase/serverless';
+import { PrismaNeon } from '@prisma/adapter-neon';
 import { PrismaClient } from './generated/prisma';
 
-// Configure Neon to use WebSocket in serverless environments
+// 1. پیکربندی WebSocket برای Neon
 neonConfig.webSocketConstructor = WebSocket;
 
 declare global {
-  // Ensure we reuse the PrismaClient in development to avoid exhausting connections
+  // جلوگیری از ایجاد چند نمونه PrismaClient در HMR
   var prisma: PrismaClient | undefined;
 }
 
-// Initialize the Neon adapter with your DATABASE_URL
-const adapter = new PrismaNeon({
-  connectionString: process.env.DATABASE_URL!,
-});
+// 2. رشته‌ی اتصال از متغیر محیطی
+const connectionString = process.env.DATABASE_URL!;
 
-// Create or reuse the PrismaClient instance
+// 3. ساخت adapter بر اساس connectionString
+const adapter = new PrismaNeon({ connectionString });  // :contentReference[oaicite:0]{index=0}
+
+// 4. نمونه singleton از PrismaClient
 const prismaClient =
   global.prisma ??
   new PrismaClient({
     adapter,
-    // Optional: enable query logging
-    // log: ['query', 'info', 'warn', 'error'],
+    // log: ['query', 'info', 'warn', 'error'], // (اختیاری)
   });
 
-// In development, assign the client to the global object
 if (process.env.NODE_ENV !== 'production') {
   global.prisma = prismaClient;
 }
 
-// Default export for easy `import prisma from '@/lib/prisma'`
+// 5. خروجی پیش‌فرض برای `import prisma from "@/lib/prisma"`
 export default prismaClient;
-export { PrismaClient, PrismaNeon }; // Export for direct access if needed

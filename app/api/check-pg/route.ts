@@ -1,28 +1,20 @@
-// app/api/check-pg/route.ts
+// app/api/check-db/route.ts
+export const runtime = 'nodejs';
+
 import { NextResponse } from 'next/server';
-import { Client } from 'pg';
+import prisma from '@/lib/prisma';
 
 export async function GET() {
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    // اگر نیاز به قبول گواهی‌های self-signed داشتید:
-    ssl: { rejectUnauthorized: false },
-  });
-
   try {
-    await client.connect();
-    const result = await client.query('SELECT NOW()');
-    await client.end();
-
-    return NextResponse.json({
-      ok: true,
-      now: result.rows[0],
-    });
+    // ساده‌ترین تست اتصال
+    await prisma.$queryRaw`SELECT 1`;
+    return NextResponse.json({ ok: true });
   } catch (error: any) {
-    console.error('PG connection error:', error);
+    console.error('Prisma connection error:', error);
     return NextResponse.json(
       { ok: false, error: error.message },
       { status: 500 }
     );
   }
 }
+// این کد یک endpoint ساده برای تست اتصال به پایگاه داده با Prisma است.

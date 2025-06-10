@@ -1,25 +1,25 @@
-import { getImages } from "@/actions/image.actions";
-import { ImageGrid } from "@/components/gallery/image-grid";
-import { ImageForm } from "@/components/forms/image-form";
-import { GalleryImage } from "@/store/image.store";
+// app/admin/gallery/page.tsx
+import ModalImageForm from "@/components/forms/modal-image-form";
+import GalleryGrid from "@/components/gallery/gallery-grid";
+import { getImagesAction } from "@/actions/image.actions";
+import type { GalleryImage } from "@/store/image.store";
 
 export default async function GalleryPage() {
-  const result = await getImages();
-
-  const images: GalleryImage[] = Array.isArray(result)
-    ? result.map((img) => ({
-        ...img,
-        name: img.name ?? undefined,
-        type: img.type ?? undefined,
-        size: img.size ? Number(img.size) : undefined,
-      }))
-    : [];
+  // Server‐side fetch of your gallery images
+  const images: GalleryImage[] = await getImagesAction();
 
   return (
-    <div className="p-4 space-y-6">
-      <h1 className="text-lg font-semibold">گالری تصاویر</h1>
-      <ImageForm />
-      <ImageGrid initialImages={images} />
+    <div className="space-y-6 p-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold">مدیریت گالری تصاویر</h1>
+      </div>
+
+      {/* دکمه و فرم مودال برای افزودن تصویر جدید */}
+      <ModalImageForm />
+
+      {/* شبکه نمایش تصاویر با پرکردن props */}
+      <GalleryGrid hasDelete hasEdit />
     </div>
   );
 }
+// This page serves as the main gallery management interface

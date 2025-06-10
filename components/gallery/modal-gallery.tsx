@@ -1,193 +1,62 @@
-// "use client";
-
-// import {
-//   Dialog,
-//   DialogContent,
-//   DialogHeader,
-//   DialogTitle,
-//   DialogTrigger,
-// } from "@/components/ui/dialog";
-// import { Button } from "@/components/ui/button";
-// import Image from "next/image";
-// import { useEffect, useState, useCallback } from "react";
-// import { useImageStore } from "@/store/image.store";
-
-// interface ModalGalleryProps {
-//   selectedIds?: string[];
-//   onSelect: (ids: string[]) => void;
-//   multi?: boolean; // پیش‌فرض false
-// }
-
-// function arraysEqual(a: string[], b: string[]) {
-//   return a.length === b.length && a.every((v, i) => v === b[i]);
-// }
-
-// export default function ModalGallery({
-//   selectedIds,
-//   onSelect,
-//   multi = false,
-// }: ModalGalleryProps) {
-//   const [open, setOpen] = useState(false);
-//   const [localSelected, setLocalSelected] = useState<string[]>(
-//     selectedIds ? [...selectedIds] : []
-//   );
-
-//   const { images, setImages } = useImageStore();
-
-//   /* واکشی تصاویر یک بار */
-//   useEffect(() => {
-//     (async () => {
-//       const { getImages } = await import("@/actions/image.actions");
-//       const result = await getImages();
-//       if (Array.isArray(result)) setImages(result);
-//     })();
-//   }, [setImages]);
-
-//   /* همگام‌سازی prop → state */
-//   useEffect(() => {
-//     if (!selectedIds) return;
-//     setLocalSelected((p) =>
-//       arraysEqual(p, selectedIds) ? p : [...selectedIds]
-//     );
-//   }, [selectedIds]);
-
-//   const toggleSelect = useCallback(
-//     (id: string) => {
-//       if (multi) {
-//         setLocalSelected((prev) =>
-//           prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-//         );
-//       } else {
-//         onSelect([id]);
-//         setOpen(false);
-//       }
-//     },
-//     [multi, onSelect]
-//   );
-
-//   const handleDone = () => {
-//     onSelect(localSelected);
-//     setOpen(false);
-//   };
-
-//   return (
-//     <Dialog open={open} onOpenChange={setOpen}>
-//       <DialogTrigger asChild>
-//         <Button variant="outline">
-//           {multi ? "انتخاب چند تصویر" : "انتخاب از گالری"}
-//         </Button>
-//       </DialogTrigger>
-
-//       <DialogContent className="max-w-4xl">
-//         <DialogHeader>
-//           <DialogTitle>گالری تصاویر</DialogTitle>
-//         </DialogHeader>
-
-//         <div className="mt-4 grid grid-cols-3 gap-4">
-//           {images.map((img) => {
-//             const isSelected = localSelected.includes(img.id);
-//             return (
-//               <div
-//                 key={img.id}
-//                 onClick={() => toggleSelect(img.id)}
-//                 className={`relative cursor-pointer overflow-hidden rounded border transition hover:shadow ${
-//                   isSelected ? "ring-2 ring-primary" : ""
-//                 }`}
-//               >
-//                 <Image
-//                   src={img.url}
-//                   alt={img.alt ?? ""}
-//                   width={200}
-//                   height={200}
-//                   className="h-32 w-full object-cover"
-//                 />
-//               </div>
-//             );
-//           })}
-//         </div>
-
-//         {multi && (
-//           <div className="mt-4 flex justify-end">
-//             <Button onClick={handleDone}>
-//               تأیید ({localSelected.length})
-//             </Button>
-//           </div>
-//         )}
-//       </DialogContent>
-//     </Dialog>
-//   );
-// }
 // components/gallery/modal-gallery.tsx
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
+  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { useEffect, useState, useCallback } from "react";
 import { useImageStore } from "@/store/image.store";
+import type { GalleryImage } from "@/store/image.store";
+import { getImagesAction } from "@/actions/image.actions";
 
 interface ModalGalleryProps {
+  /** IDs currently selected (single or multi) */
   selectedIds?: string[];
+  /** Called when the user confirms selection */
   onSelect: (ids: string[]) => void;
-  multi?: boolean; // پیش‌فرض false
+  /** Allow selecting multiple images */
+  multi?: boolean;
 }
 
+/** shallow array equality */
 function arraysEqual(a: string[], b: string[]) {
   return a.length === b.length && a.every((v, i) => v === b[i]);
 }
 
 export default function ModalGallery({
-  selectedIds,
+  selectedIds = [],
   onSelect,
   multi = false,
 }: ModalGalleryProps) {
   const [open, setOpen] = useState(false);
   const [localSelected, setLocalSelected] = useState<string[]>(
-    selectedIds ? [...selectedIds] : []
+    selectedIds
   );
+  const images = useImageStore((s) => s.images);
+  const setImages = useImageStore((s) => s.setImages);
 
-  const { images, setImages } = useImageStore();
-
-  /* واکشی تصاویر یک بار از سرور */
+  // sync incoming prop → local
   useEffect(() => {
-    (async () => {
-      try {
-        const { getImages } = await import("@/actions/image.actions");
-        const result = await getImages();
-        if (Array.isArray(result)) {
-          // Map to store’s GalleryImage shape
-          const sanitized = result.map((img) => ({
-            id: img.id,
-            url: img.url,
-            alt: img.alt ?? "",
-            name: img.name ?? undefined,
-            type: img.type ?? undefined,
-            size: img.size ?? undefined,
-            // Note: getImages() does not return variantId; omit it here
-          }));
-          setImages(sanitized);
-        }
-      } catch (err) {
-        console.error("Error loading images:", err);
-      }
-    })();
-  }, [setImages]);
-
-  /* همگام‌سازی prop → state */
-  useEffect(() => {
-    if (!selectedIds) return;
-    setLocalSelected((p) =>
-      arraysEqual(p, selectedIds) ? p : [...selectedIds]
+    setLocalSelected((prev) =>
+      arraysEqual(prev, selectedIds) ? prev : [...selectedIds]
     );
   }, [selectedIds]);
 
-  const toggleSelect = useCallback(
+  // fetch images on mount
+  useEffect(() => {
+    getImagesAction().then((imgs) => {
+      setImages(imgs);
+    });
+  }, [setImages]);
+
+  // toggle selection
+  const toggle = useCallback(
     (id: string) => {
       if (multi) {
         setLocalSelected((prev) =>
@@ -201,6 +70,7 @@ export default function ModalGallery({
     [multi, onSelect]
   );
 
+  // confirm multi‐select
   const handleDone = () => {
     onSelect(localSelected);
     setOpen(false);
@@ -214,20 +84,20 @@ export default function ModalGallery({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-4xl" aria-describedby="gallery-desc">
+      <DialogContent className="max-w-4xl p-4">
         <DialogHeader>
           <DialogTitle>گالری تصاویر</DialogTitle>
         </DialogHeader>
 
-        <div className="mt-4 grid grid-cols-3 gap-4">
-          {images.map((img) => {
-            const isSelected = localSelected.includes(img.id);
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-4">
+          {images.map((img: GalleryImage) => {
+            const isSel = localSelected.includes(img.id);
             return (
               <div
                 key={img.id}
-                onClick={() => toggleSelect(img.id)}
-                className={`relative cursor-pointer overflow-hidden rounded border transition hover:shadow ${
-                  isSelected ? "ring-2 ring-primary" : ""
+                onClick={() => toggle(img.id)}
+                className={`relative cursor-pointer rounded overflow-hidden border ${
+                  isSel ? "ring-2 ring-primary" : "hover:shadow-lg"
                 }`}
               >
                 <Image
@@ -235,22 +105,12 @@ export default function ModalGallery({
                   alt={img.alt}
                   width={200}
                   height={200}
-                  className="h-32 w-full object-cover"
+                  className="object-cover w-full h-32"
                 />
-                {isSelected && multi && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setLocalSelected((prev) =>
-                        prev.filter((x) => x !== img.id)
-                      );
-                    }}
-                    className="absolute top-1 right-1 bg-white rounded-full text-red-500 w-5 h-5 flex items-center justify-center text-[10px]"
-                    aria-label="حذف تصویر انتخاب شده"
-                  >
-                    ×
-                  </button>
+                {isSel && (
+                  <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center text-white text-xl">
+                    ✓
+                  </div>
                 )}
               </div>
             );
@@ -258,10 +118,8 @@ export default function ModalGallery({
         </div>
 
         {multi && (
-          <div className="mt-4 flex justify-end">
-            <Button onClick={handleDone}>
-              تأیید ({localSelected.length})
-            </Button>
+          <div className="mt-4 text-right">
+            <Button onClick={handleDone}>تأیید ({localSelected.length})</Button>
           </div>
         )}
       </DialogContent>

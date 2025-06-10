@@ -6,7 +6,7 @@ interface FormFrameProps {
 
 export function FormFrame({ children }: FormFrameProps) {
   return (
-     <div className="flex items-center justify-center">
+     <div className="flex items-center justify-center w-full sm:max-w-xl lg:max-w-2xl xl:max-w-7xl p-0">
       <div
         className="shadow-md border-8 border-primary"
       

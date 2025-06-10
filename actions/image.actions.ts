@@ -1,3 +1,4 @@
+//actions/image.actions.ts
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -5,14 +6,13 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { FormState } from "@/types/form";
 import { utapi } from "@/lib/uploadthing";
-import { GalleryImage, useImageStore } from "@/store/image.store"
+import { GalleryImage, useImageStore } from "@/store/image.store";
 import { imageSchema } from "@/zod-validations";
 
 export async function createImageAction(
   prevState: FormState,
   payload: FormData
 ): Promise<FormState> {
-
   if (!(payload instanceof FormData)) {
     return {
       success: false,
@@ -48,11 +48,8 @@ export async function createImageAction(
 
   const { alt, file } = data;
 
-
-
   console.log("alt", alt);
   console.log("file", file);
-
 
   try {
     const uploadRes = await utapi.uploadFiles([file]);
@@ -104,43 +101,43 @@ export async function createImageAction(
     };
   }
 }
+/**
+ * Deletes the Uploadthing file (by its fileKey) and then the DB record.
+ */
+
 export async function deleteImageAction(id: string): Promise<FormState> {
+  
   try {
-    const image = await prisma.image.findUnique({
-      where: { id },
-    });
-
+    const image = await prisma.image.findUnique({ where: { id } });
+    console.log("image found:", image);
     if (!image) {
-      return {
-        success: false,
-        errors: { error: ["تصویر یافت نشد."] },
-      };
+      return { success: false, errors: { error: ["تصویر یافت نشد."] } };
     }
 
-    if (image.name) {
-      await utapi.deleteFiles([image.name]);
-    } else {
-      console.warn("نام فایل تصویر برای حذف موجود نیست، حذف فقط دیتابیس انجام می‌شود.");
+    // 1️⃣ پاک‌سازی از UploadThing با fileKey استخراج‌شده از URL
+    if (image.url) {
+      const key = image.url.split("/").pop();
+      if (key) {
+        try {
+          await utapi.deleteFiles([key]);
+          console.log("✅ Deleted from UploadThing:", key);
+        } catch (utErr) {
+          console.log("⚠️ Failed to delete from UploadThing:", utErr);
+        }
+      } else {
+        console.warn("⚠️ Could not extract key from URL:", image.url);
+      }
     }
-
-    await prisma.image.delete({
-      where: { id },
-    });
-
+    // 2️⃣ Delete the DB record
+    await prisma.image.delete({ where: { id } });
     revalidatePath("/admin/gallery");
-
     return { success: true };
-  } catch (error) {
-    console.error(
-      "خطا هنگام حذف تصویر:",
-      error instanceof Error ? error.message : error
-    );
-    return {
-      success: false,
-      errors: { error: ["مشکلی هنگام حذف تصویر پیش آمد."] },
-    };
+  } catch (err) {
+    console.error("deleteImageAction error:", err);
+    return { success: false, errors: { error: ["خطا در حذف تصویر."] } };
   }
 }
+
 export async function updateImageAltAction(
   id: string,
   alt: string
@@ -180,14 +177,16 @@ export async function updateImageAltAction(
   }
 }
 
-
 export async function getImages() {
   return prisma.image.findMany({
     orderBy: { createdAt: "desc" },
   });
 }
 
-export async function getImagesAction(limit = 20, cursor?: string): Promise<GalleryImage[]> {
+export async function getImagesAction(
+  limit = 20,
+  cursor?: string
+): Promise<GalleryImage[]> {
   const images = await prisma.image.findMany({
     take: limit,
     skip: cursor ? 1 : 0,

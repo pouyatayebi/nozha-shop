@@ -24,13 +24,18 @@ type ImageStore = {
   updateImageAlt: (id: string, alt: string) => void;
   fetchInitialImages: () => Promise<void>;
   fetchMoreImages: () => Promise<void>;
+  // ← add modal state
+  modalOpen: boolean;
+  setModalOpen: (open: boolean) => void;
 };
 
 export const useImageStore = create<ImageStore>((set, get) => ({
   images: [],
   isLoading: false,
   hasMore: true,
-
+  // ← initial modal state closed
+  modalOpen: false,
+  setModalOpen: (open) => set({ modalOpen: open }),
   addImage: (image) =>
     set((state) => ({
       images: [image, ...state.images],

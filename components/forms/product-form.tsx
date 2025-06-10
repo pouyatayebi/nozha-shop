@@ -268,7 +268,7 @@ export default function ProductForm({ onClose }: ProductFormProps) {
           />
 
           {/* اطلاعات سئو */}
-          <div className="grid gap-4 sm:grid-cols-2">
+
             <FormField
               control={form.control}
               name="seoTitle"
@@ -293,7 +293,7 @@ export default function ProductForm({ onClose }: ProductFormProps) {
                 </FormItem>
               )}
             />
-          </div>
+  
 
           {/* ورودی مخفی برای تگ‌ها */}
           <input

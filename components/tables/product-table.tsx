@@ -112,7 +112,7 @@ export default function ProductTable() {
 
   const openEditVariant = (
     productId: string,
-    variant: { id: string; title: string; stock: number; price: number; imageIds: string[] }
+    variant: { id: string; title: string; stock: number; price: number; discountPercentage:number;imageIds: string[] }
   ) => {
     setVariantEditing({ productId, variant });
   };

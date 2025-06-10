@@ -46,6 +46,7 @@ const mapRawToProduct = (p: any): Product => ({
           title: v.title,
           stock: v.stock ?? 0,
           price: toNumber(v.price) || 0,
+          discountPercentage: toNumber(v.discountPercentage) || 0,
           imageIds: Array.isArray(v.Image)
             ? v.Image.map((img: any) => img.id)
             : [],

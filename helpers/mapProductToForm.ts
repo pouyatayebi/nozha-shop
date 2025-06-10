@@ -11,7 +11,7 @@ export function mapProductToForm(product: Product | null): ProductInput {
       categoryId: null,
       isFeatured: false,
       tags: [],
-      variants: [{ title: "", stock: 0, price: 0, imageIds: [] }],
+      variants: [{ title: "", stock: 0, price: 0, discountPercentage:0,imageIds: [] }],
       seoTitle: "",
       seoDescription: "",
     };

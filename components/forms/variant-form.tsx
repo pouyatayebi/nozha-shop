@@ -31,13 +31,14 @@ import { FormState } from "@/types/form";
 export default function VariantForm() {
   const { variantEditing, setVariantEditing, setProducts } = useProductStore();
   const { images } = useImageStore();
-
   if (!variantEditing) return null;
   const { productId, variant } = variantEditing;
 
+  // include discountPercentage in default values
   const defaultValues: VariantInput = {
     title: variant?.title ?? "",
     price: variant?.price ?? 0,
+    discountPercentage: variant?.discountPercentage ?? 0,
     stock: variant?.stock ?? 0,
     imageIds: variant?.imageIds ?? [],
   };
@@ -55,7 +56,6 @@ export default function VariantForm() {
         : createVariantAction(_prev, fd),
     [variant]
   );
-
   const [state, formAction, isPending] = useActionState(actionFn, {
     success: false,
     version: 0,
@@ -69,18 +69,16 @@ export default function VariantForm() {
   }, [state.version, variant, setVariantEditing, setProducts]);
 
   const watchedImageIds: string[] = form.watch("imageIds") ?? [];
-
-  const removeImageId = (idToRemove: string) => {
+  const removeImageId = (idToRemove: string) =>
     form.setValue(
       "imageIds",
       watchedImageIds.filter((id) => id !== idToRemove)
     );
-  };
 
   return (
     <Form {...form}>
       <form action={formAction} className="space-y-4">
-        {/* نام واریانت */}
+        {/* Title */}
         <FormField
           control={form.control}
           name="title"
@@ -99,27 +97,49 @@ export default function VariantForm() {
           )}
         />
 
-        {/* قیمت */}
-        <FormField
-          control={form.control}
-          name="price"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>قیمت</FormLabel>
-              <FormControl>
-                <input
-                  {...field}
-                  type="number"
-                  step="0.01"
-                  className="w-full border rounded p-2"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Price & Discount */}
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="price"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>قیمت</FormLabel>
+                <FormControl>
+                  <input
+                    {...field}
+                    type="number"
+                    step="0.01"
+                    className="w-full border rounded p-2"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        {/* موجودی */}
+          <FormField
+            control={form.control}
+            name="discountPercentage"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>درصد تخفیف</FormLabel>
+                <FormControl>
+                  <input
+                    {...field}
+                    type="number"
+                    min={0}
+                    max={100}
+                    className="w-full border rounded p-2"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {/* Stock */}
         <FormField
           control={form.control}
           name="stock"
@@ -138,7 +158,7 @@ export default function VariantForm() {
           )}
         />
 
-        {/* تصاویر (انتخاب چندگانه) */}
+        {/* Images (multi‐select) */}
         <FormField
           control={form.control}
           name="imageIds"
@@ -160,7 +180,7 @@ export default function VariantForm() {
                   <ModalGallery
                     selectedIds={watchedImageIds}
                     onSelect={(newIds) => field.onChange(newIds)}
-                    multi={true}
+                    multi
                   />
                 </div>
               </FormControl>
@@ -169,7 +189,7 @@ export default function VariantForm() {
           )}
         />
 
-        {/* فیلدهای مخفی */}
+        {/* Hidden fields */}
         <input type="hidden" name="productId" value={productId} />
         {variant && <input type="hidden" name="id" value={variant.id} />}
         <input
@@ -178,12 +198,13 @@ export default function VariantForm() {
           value={JSON.stringify(watchedImageIds)}
         />
 
-        {/* دکمه‌های عمل */}
+        {/* Actions */}
         <div className="flex justify-end gap-2">
           <Button
             variant="outline"
             type="button"
             onClick={() => setVariantEditing(null)}
+            disabled={isPending}
           >
             انصراف
           </Button>
